@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="./vue.js"></script>
+    <style>
+        body{
+            margin: 0 auto;
+        }
+        div.title h2 {
+            text-align: center;
+        }
+    div.center{
+        width: 500px;
+        margin: 0 auto;
+    }
+    table input {
+        border: 0;
+    }
+    .button{
+        margin-top: 20px;
+    }
+    .button span{
+        display: inline-block;
+        width: 100px;
+        height: 40px;
+        background:#409EFF;
+        color: #fff;
+        border-radius: 10px;
+        line-height: 40px;
+        text-align: center;
+        cursor:pointer;
+    }
+    .header>div{
+        margin-right: 20px;
+    }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="title">
+            <h2>Ra Rz 计算程序</h2>
+            <!-- <span>powered by ymy</span> -->
+        </div>
+        <div class="center">
+            <div class="header">
+                <div style="color:red;">操作顺序： 先点击“X轴数据导入”按钮，在点击“Y轴数据导入”</div>
+                <li style="color:red;">下边文本框的数据仅支持之间的分隔仅支持 英文逗号：“,” 和 “换行（从excel表里复制或人工回车）” </li>
+                <div style="float: left;">
+                    <div class="x_name">x轴的坐标</div>
+                    <textarea name="" id="" cols="30" rows="10" v-model="ta_xs"></textarea>
+                    <div class="button">
+                        <span @click="leadInxs">X轴数据导入到表格</span>
+                    </div>
+                </div>
+
+                <div style="float: left;">
+                    <div class="x_name">y轴的坐标</div>
+                    <textarea name="" id="" cols="30" rows="10" v-model="ta_ys"></textarea>
+                    <div class="button">
+                        <span @click="leadInys">Y轴数据导入到表格</span>
+                    </div>
+                </div>
+            </div>
+
+            <table border="1" rules="all">
+                <tr>
+                    <th>采样点</th>
+                    <th>横坐标值</th>
+                    <th>纵坐标值</th>
+                    <th>动作</th>
+                </tr>
+                <tr v-for="(item,index) in trs">
+                    <td>{{item.id}}</td>
+                    <td><input class="xzou" type="text" v-model="item.xvalue"></td>
+                    <td><input class="yzou" type="text" v-model="item.yvalue"></td>
+                    <td><input v-if="(index == trs.length-1) && index !=0" type="button" value="删除此行" @click="removeline"></td>
+                </tr>
+            </table>
+            <div class="button">
+                <span @click="addAlin">Add a line</span>
+                <span @click="computer" style="background: #67C23A">计算</span>
+                <span @click="clear" style="background: #F56C6C">清空</span>
+            </div>
+            <ul v-if="answer">
+                <li v-for="li in lis">{{li.text}}的值为：{{li.value}}</li>
+            </ul>
+            <div style="height: 500px;"></div>
+        </div>
+    </div>
+
+    
+</body>
+</html>
+
+
+
+
+
+<script>
+var xx,yy,x_ave,y_ave,k_value,b_value;
+var z_arr=[];
+var app = new Vue({
+  el: '#app',
+  data(){
+      return {
+        trs:[{id:1,xvalue:'',yvalue:''}],
+        lis:{k:{text:'k',value:0},b:{text:'b',value:0},max:{text:'最大值（Rp）',value:0},min:{text:'最小值（Rv）',value:0},rz:{text:'Rz',value:0},ra:{text:'Ra',value:0}},
+        answer:false,
+        ta_xs:'',
+        ta_ys:''
+      }
+  },
+  methods:{
+    leadInxs(){
+        var reg = /\n/g
+        console.log(this.ta_xs.length)
+        this.ta_xs = this.ta_xs.replace(reg,",");
+        var taxArr = this.ta_xs.split(",");
+        var newtrs = [];
+        taxArr.forEach(function(item,index){
+            var obj = {
+                id:index+1,
+                xvalue:item,
+                yvalue:''
+            }
+            newtrs.push(obj);
+        })
+        this.trs = newtrs;
+        // console.log(taxArr);
+    },
+    leadInys(){
+        var reg = /\n/g
+        this.ta_ys = this.ta_ys.replace(reg,",");
+        var tayArr = this.ta_ys.split(",");
+        var trs_two = this.trs;
+        tayArr.forEach(function(item,index){
+            trs_two.forEach(function(obj){
+                if(obj.id == index+1){
+                    // console.log(item);
+                    obj.yvalue = item;
+                }
+            })
+        })
+        this.trs = trs_two;
+        // console.log(tayArr);
+    },
+    addAlin:function(){
+        var lastId = this.trs[this.trs.length-1].id+1;
+        var newline = {
+            id:lastId,
+            xvalue:'',yvalue:''
+        }
+        this.trs.push(newline);
+    },
+    computer:function(){
+        this.answer = true;
+         xx = [];
+         yy = [];
+        this.trs.forEach(function(item){
+            xx.push(Number(item.xvalue));
+            yy.push(Number(item.yvalue));
+        });
+        console.log(xx);
+        console.log(yy);
+        //  xx= [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.1,2.2,2.3,2.4,2.5]
+        //  yy = [0.028,0.025,0.031,0.032,0.028,0.031,0.026,0.032,0.034,0.028,0.025,0.031,0.025,0.028,0.033,0.025,0.031,0.028,0.033,0.032,0.026,0.033,0.034,0.029,0.033]
+         x_ave = average(xx); //x坐标的平均值
+         y_ave = average(yy); //y坐标的平均值
+        this.k();
+    },
+    clear:function(){
+        this.answer = false;
+        this.trs=[{id:1,xvalue:'',yvalue:''}]
+    },
+    removeline:function(){
+        this.$nextTick(function () {
+            this.trs.pop()
+        })
+    },
+    k:function(){ //求k:
+        var k_top = 0;
+        for(var i=0;i<xx.length;i++){
+            var x_sub = sub(xx[i],x_ave);
+            var y_sub = sub(yy[i],y_ave);
+            var x_y_sub = mul(x_sub,y_sub);
+            k_top = add(k_top,x_y_sub); //k 上半部分累加
+        }
+        var k_bottom = 0;
+        for(var i=0;i<xx.length;i++){
+            var x_sub = sub(xx[i],x_ave);
+            var x_sub_2 = Math.pow(x_sub,2);
+            k_bottom = add(k_bottom,x_sub_2); // k的下半部分累加
+        }
+        
+        k_value = div(k_top,k_bottom);
+        this.lis.k.value = k_value;
+        this.b();
+    },
+    b:function (){
+        var k_x_ave = mul(k_value,x_ave);  //k乘 x的平均值
+        b_value = sub(y_ave,k_x_ave);// y的平均值-上值
+        this.lis.b.value = b_value;
+        this.zarray();
+    },
+    zarray:function (){
+        console.log(xx.length);
+        z_arr= [];
+        for(var i=0;i<xx.length;i++){
+            z_arr.push(this.zi(i));
+        }
+        this.rz(z_arr);
+        this.ra(z_arr);
+    },
+    zi:function (i){
+        var kxi= mul(k_value,xx[i]); // k 乘以xi
+        var bAdd_kxi = add(b_value,kxi); // b +  kxi
+        return sub(yy[i],bAdd_kxi); // 一个Zi
+    },
+    rz:function (ary){
+        var maxN = Math.max.apply(null,ary); //最大值
+        this.lis.max.value = maxN;
+        var minN = Math.min.apply(null,ary); // 最小值
+        this.lis.min.value = minN;
+        var z_sum = add(Math.abs(maxN),Math.abs(minN)); //绝对值相加
+        this.lis.rz.value = z_sum;
+    },
+    ra:function (ary){
+        var ra_sum = 0;
+        ary.forEach(function(item){
+            ra_sum = add(ra_sum,Math.abs(item));
+        }) //绝对值相加
+        var ra_val = div(ra_sum,ary.length);
+        this.lis.ra.value = ra_val;
+    }
+    
+  }
+})
+
+
+
+//平均值 （参数为数组）
+function average(arr){
+    var sum = 0;
+    arr.forEach(function(item)  {
+        sum = add(item,sum);
+    });
+    var ave = div(sum,arr.length);
+    return ave;
+};
+
+
+// JS 浮点型--四则基础计算
+
+function add(a, b) {
+    var c, d, e;
+    try {
+        c = a.toString().split(".")[1].length;
+    } catch (f) {
+        c = 0;
+    }
+    try {
+        d = b.toString().split(".")[1].length;
+    } catch (f) {
+        d = 0;
+    }
+    return e = Math.pow(10, Math.max(c, d)), (mul(a, e) + mul(b, e)) / e;
+}
+function sub(a, b) {
+    var c, d, e;
+    try {
+        c = a.toString().split(".")[1].length;
+    } catch (f) {
+        c = 0;
+    }
+    try {
+        d = b.toString().split(".")[1].length;
+    } catch (f) {
+        d = 0;
+    }
+    return e = Math.pow(10, Math.max(c, d)), (mul(a, e) - mul(b, e)) / e;
+}
+function mul(a, b) {
+    var c = 0,
+        d = a.toString(),
+        e = b.toString();
+    try {
+        c += d.split(".")[1].length;
+    } catch (f) {}
+    try {
+        c += e.split(".")[1].length;
+    } catch (f) {}
+    return Number(d.replace(".", "")) * Number(e.replace(".", "")) / Math.pow(10, c);
+}
+function div(a, b) {
+    var c, d, e = 0,
+        f = 0;
+    try {
+        e = a.toString().split(".")[1].length;
+    } catch (g) {}
+    try {
+        f = b.toString().split(".")[1].length;
+    } catch (g) {}
+    return c = Number(a.toString().replace(".", "")), d = Number(b.toString().replace(".", "")), mul(c / d, Math.pow(10, f - e));
+}
+    
+
+
+
+//  下面为计算公式  ！！！ 测试代码
+/*
+var xx= [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.1,2.2,2.3,2.4,2.5]
+var yy = [0.028,0.025,0.031,0.032,0.028,0.031,0.026,0.032,0.034,0.028,0.025,0.031,0.025,0.028,0.033,0.025,0.031,0.028,0.033,0.032,0.026,0.033,0.034,0.029,0.033]
+// 求k
+var x_ave = average(xx); //x坐标的平均值
+var y_ave = average(yy); //y坐标的平均值
+var k_value = 0;
+function k(){    
+    var k_top = 0;
+    for(var i=0;i<xx.length;i++){
+        var x_sub = sub(xx[i],x_ave);
+        var y_sub = sub(yy[i],y_ave);
+        var x_y_sub = mul(x_sub,y_sub);
+        k_top = add(k_top,x_y_sub); //k 上半部分累加
+    }
+    var k_bottom = 0;
+    for(var i=0;i<xx.length;i++){
+        var x_sub = sub(xx[i],x_ave);
+        var x_sub_2 = Math.pow(x_sub,2);
+        k_bottom = add(k_bottom,x_sub_2); // k的下半部分累加
+    }
+    
+    k_value = div(k_top,k_bottom);
+    console.log("k的值====",k_value);
+    return k_value;
+}
+// k();
+// 求b
+function b(){
+    var k_x_ave = mul(k_value,x_ave);  //k乘 x的平均值
+    return sub(y_ave,k_x_ave); // y的平均值-上值
+}
+// console.log('b的值===',b());
+
+// 计算偏距  数组 Z(i)
+var z_arr = [];
+function zarray(){
+    for(var i=0;i<xx.length;i++){
+        z_arr.push(zi(i));
+    }
+    return z_arr;
+}
+// console.log("Zi的数组===",zarray());
+// 得到zi的公式
+function zi(i){
+    var kxi= mul(k_value,xx[i]); // k 乘以xi
+    var bAdd_kxi = add(b(),kxi); // b +  kxi
+    return sub(yy[i],bAdd_kxi); // 一个Zi
+}
+
+// 求 Rz
+function rz(ary){
+    var maxN = Math.max.apply(null,ary); //最大值
+    console.log("最大值===",maxN);
+    var minN = Math.min.apply(null,ary); // 最小值
+    console.log("最小值===",minN);
+    var z_sum = add(Math.abs(maxN),Math.abs(minN)); //绝对值相加
+    return z_sum;
+}
+// console.log("Rz====",rz(z_arr));
+// 求Ra
+function ra(ary){
+    var ra_sum = 0;
+    ary.forEach(function(item){
+        ra_sum = add(ra_sum,Math.abs(item));
+    }) //绝对值相加
+    var ra_val = div(ra_sum,ary.length);
+    return ra_val;
+}
+// console.log("Ra====",ra(z_arr));
+
+
+*/
+
+
+</script>
+
+
